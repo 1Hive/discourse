@@ -1,0 +1,49 @@
+# Copyright 2020 Google, LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Discourse Rebuild
+
+on:
+  push:
+    tags:
+      - v1
+      - v1.*
+
+env:
+  PROJECT_ID: ${{ secrets.GCE_PROJECT }}
+  GCE_INSTANCE: hive-discourse
+  GCE_INSTANCE_ZONE: us-east1-b
+  SSH: ${{ secrets.SSH }}
+  LAUNCHER_PATH: ${{ secrets.LAUNCHER_PATH }}
+
+jobs:
+  rebuild:
+    name: Rebuild
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup gcloud CLI
+      - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+        with:
+          version: "290.0.1"
+          # Note: this KEY is just the .json credentials of the service account, base64 encoded.
+          service_account_key: ${{ secrets.GCE_SA_KEY }}
+          project_id: ${{ secrets.GCE_PROJECT }}
+
+      - name: Rebuild
+        run: |-
+          gcloud compute ssh root@$GCE_INSTANCE --zone $GCE_INSTANCE_ZONE --command "${LAUNCHER_PATH} rebuild web_only"
